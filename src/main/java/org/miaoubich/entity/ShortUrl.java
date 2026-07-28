@@ -4,7 +4,15 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "short_urls", indexes = { @Index(name = "idx_short_code", columnList = "shortCode", unique = true) })
+@Table(name = "short_urls", 
+	   indexes = { 
+			   @Index(
+					   name = "idx_short_code", 
+					   columnList = "shortCode", 
+					   unique = true
+					   ) 
+			   }
+)
 public class ShortUrl {
 
 	@Id

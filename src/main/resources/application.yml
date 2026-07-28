@@ -1,3 +1,6 @@
+server:
+  port: 8080
+  
 spring:
  application:
   name: url-shortner-app
@@ -7,23 +10,7 @@ spring:
   username: ${SPRING_DATASOURCE_USERNAME:postgres}
   password:  ${SPRING_DATASOURCE_PASSWORD:password}
  jpa:
+  open-in-view: false
   hibernate:
    ddl-auto: update
   show-sql: true 
-
-version: "3.8"
- 
-services:
- postgres:
-  image: postgres:16-alpine
-  environment:
-   POSTGRES_DB: urlshortner
-   POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME:postgres}
-   POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:password}
-  ports:
-   - "5432:5432"
-  volumes:
-   - postgres_data:/var/lib/postgresql/data
- 
-volumes:
- postgres_data: 

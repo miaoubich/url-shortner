@@ -13,7 +13,7 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
 
 	Optional<ShortUrl> findByShortCodeAndActiveTrue(String shortCode);
 	
-	boolean existByShortCode(String shortCode);
+	boolean existsByShortCode(String shortCode);
 	
 	/**
      * Keyset ("seek") pagination instead of OFFSET/LIMIT.

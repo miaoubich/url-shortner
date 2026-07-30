@@ -14,6 +14,7 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
 	Optional<ShortUrl> findByShortCodeAndActiveTrue(String shortCode);
 	
 	boolean existsByShortCode(String shortCode);
+	Optional<ShortUrl> findByShortCode(String shortCode);
 	
 	/**
      * Keyset ("seek") pagination instead of OFFSET/LIMIT.
@@ -23,4 +24,5 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
      */
 	@Query("select u from ShortUrl u where u.id < :cursor order by u.id desc")
 	List<ShortUrl> findPageByCursor(@Param("cursor") Long cursor, Limit limit);
+
 }

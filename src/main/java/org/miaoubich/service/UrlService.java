@@ -7,6 +7,9 @@ import org.miaoubich.dto.RedirectTarget;
 import org.miaoubich.dto.UrlResponse;
 import org.miaoubich.entity.ShortUrl;
 import org.miaoubich.repository.ShortUrlRepository;
+import org.miaoubich.config.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +20,7 @@ public class UrlService {
 
     private final ShortUrlRepository shortUrlRepository;
     private final ShortCodeGenerator shortCodeGenerator;
-    private static final String LOCALHOST = "http://localhost:8080/";
+    private final String LOCALHOST = "http://localhost:8080/";
 
     public UrlService(ShortUrlRepository shortUrlRepository, ShortCodeGenerator shortCodeGenerator) {
         this.shortUrlRepository = shortUrlRepository;
@@ -41,6 +44,7 @@ public class UrlService {
         return toResponse(saved);
     }
 
+    @Cacheable(cacheNames = CacheConfig.URL_LOOKUP_CACHE, key = "#shortCode")
     @Transactional(readOnly = true)
     public RedirectTarget resolveLongUrl(String shortCode) {
         ShortUrl shortUrl = shortUrlRepository.findByShortCodeAndActiveTrue(shortCode)
@@ -50,6 +54,22 @@ public class UrlService {
             throw new EntityNotFoundException("Short code expired: " + shortCode);
         }
         return new RedirectTarget(shortUrl.getLongUrl());
+    }
+
+    @CacheEvict(cacheNames = CacheConfig.URL_LOOKUP_CACHE, key = "#shortCode")
+    @Transactional
+    public void deactivate(String shortCode) {
+        ShortUrl shortUrl = shortUrlRepository.findByShortCodeAndActiveTrue(shortCode)
+                .orElseThrow(() -> new EntityNotFoundException("Unknown short code: " + shortCode));
+        shortUrl.setActive(false);
+    }
+    
+    @CacheEvict(cacheNames = CacheConfig.URL_LOOKUP_CACHE, key = "#shortCode")
+    @Transactional
+    public void updateStatus(String shortCode, boolean active) {
+        ShortUrl shortUrl = shortUrlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new EntityNotFoundException("Unknown short code: " + shortCode));
+        shortUrl.setActive(active);
     }
 
     private String generateUniqueCode() {

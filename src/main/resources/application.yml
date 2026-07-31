@@ -14,3 +14,17 @@ spring:
   hibernate:
    ddl-auto: update
   show-sql: true 
+  
+ kafka:
+  bootstrap-servers: localhost:9092
+  producer:
+   key-serializer: org.apache.kafka.common.serialization.StringSerializer
+   value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+   acks: 1 #It ackowledge the producer that the leader broker wrotten the event
+  consumer:
+   group-id: analytics-service
+   key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+   value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+   properties:
+    spring.json.trusted.packages: org.miaoubich.dto
+    spring.json.value.default.type: org.miaoubich.dto.ClickEvent

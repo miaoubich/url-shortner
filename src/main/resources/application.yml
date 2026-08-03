@@ -28,3 +28,19 @@ spring:
    properties:
     spring.json.trusted.packages: org.miaoubich.dto
     spring.json.value.default.type: org.miaoubich.dto.ClickEvent
+    
+resilience4j:
+ circuitbreaker:
+  instances:
+    urlSafetyCheck:  # ← @CircuitBreaker(name = "urlSafetyCheck") reads THIS block
+     sliding-window-size: 20
+     failure-rate-threshold: 50
+ timelimiter:
+  instances:
+    urlSafetyCheck:  # ← @TimeLimiter(name = "urlSafetyCheck") reads THIS block
+     timeout-duration: 800ms
+ retry:
+  instances:
+    urlSafetyCheck:  # ← @Retry(name = "urlSafetyCheck") reads THIS block
+     max-attempts: 3
+     wait-duration: 500ms

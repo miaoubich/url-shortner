@@ -2,12 +2,13 @@ package org.miaoubich.service;
 
 import java.time.Instant;
 
+import org.miaoubich.config.CacheConfig;
 import org.miaoubich.dto.CreateUrlRequest;
 import org.miaoubich.dto.RedirectTarget;
 import org.miaoubich.dto.UrlResponse;
 import org.miaoubich.entity.ShortUrl;
+import org.miaoubich.exception.UnsafeUrlException;
 import org.miaoubich.repository.ShortUrlRepository;
-import org.miaoubich.config.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -20,20 +21,34 @@ public class UrlService {
 
     private final ShortUrlRepository shortUrlRepository;
     private final ShortCodeGenerator shortCodeGenerator;
+    private final UrlSafetyCheckClient safetyCheckClient;
+    
     private final String LOCALHOST = "http://localhost:8080/";
 
-    public UrlService(ShortUrlRepository shortUrlRepository, ShortCodeGenerator shortCodeGenerator) {
+    public UrlService(ShortUrlRepository shortUrlRepository, 
+    		          ShortCodeGenerator shortCodeGenerator,
+    		          UrlSafetyCheckClient safetyCheckClient) {
         this.shortUrlRepository = shortUrlRepository;
         this.shortCodeGenerator = shortCodeGenerator;
+        this.safetyCheckClient = safetyCheckClient;
     }
 
     @Transactional
     public UrlResponse createShortUrl(CreateUrlRequest request) {
-        String code;
+    	// Fire the safety check; fails open per our design decision above.
+        // We don't block on the result here since isSafe() returns a
+        // CompletableFuture — see the note below about why.
+        boolean safe = safetyCheckClient.isSafe(request.longUrl()).join();
+        
+        if (!safe) {
+            throw new IllegalArgumentException("This URL was flagged as potentially unsafe: " + request.longUrl());
+        }
+        
+    	String code;
 
         if (request.customCode() != null && !request.customCode().isBlank()) {
             if (shortUrlRepository.existsByShortCode(request.customCode())) {
-                throw new IllegalArgumentException("Short code already in use: " + request.customCode());
+                throw new UnsafeUrlException("Short code already in use: " + request.customCode());
             }
             code = request.customCode();
         } else {

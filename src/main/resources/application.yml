@@ -34,7 +34,14 @@ resilience4j:
   instances:
     urlSafetyCheck:  # ← @CircuitBreaker(name = "urlSafetyCheck") reads THIS block
      sliding-window-size: 20
+     slidingWindowType: COUNT_BASED
      failure-rate-threshold: 50
+     registerHealthIndicator: true
+     automaticTransitionFromOpenToHalfOpenEnabled: true
+     waitDurationInOpenState: 5s
+     permittedNumberOfCallsInHalfOpenState: 3
+     minimumNumberOfCalls: 5
+     eventConsumerBufferSize: 10
  timelimiter:
   instances:
     urlSafetyCheck:  # ← @TimeLimiter(name = "urlSafetyCheck") reads THIS block
@@ -44,3 +51,21 @@ resilience4j:
     urlSafetyCheck:  # ← @Retry(name = "urlSafetyCheck") reads THIS block
      max-attempts: 3
      wait-duration: 500ms
+     
+management:
+ health:
+  circuitbreakers: 
+   enabled: true
+ endpoints:
+  web:
+   exposure:
+    include: health, metrics, prometheus, caches, circuitbreakers, circuitbreakerevents
+ metrics:
+  distribution:
+   percentiles-histogram:
+    httpServerRequests: true   
+ endpoint:
+  health:
+   show-details: always 
+ 
+      

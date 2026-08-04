@@ -13,12 +13,16 @@ import java.util.concurrent.CompletableFuture;
 public class UrlSafetyCheckClient {
 
     private static final Logger log = LoggerFactory.getLogger(UrlSafetyCheckClient.class);
-
-    @CircuitBreaker(name = "urlSafetyCheck", fallbackMethod = "fallbackAllow")
-    @TimeLimiter(name = "urlSafetyCheck")
-    @Retry(name = "urlSafetyCheck")
+    private static final String USER_SAFETY_CHECK = "urlSafetyCheck";
+    
+    @CircuitBreaker(name = USER_SAFETY_CHECK, fallbackMethod = "fallbackAllow")
+    @TimeLimiter(name = USER_SAFETY_CHECK)
+    @Retry(name = USER_SAFETY_CHECK)
     public CompletableFuture<Boolean> isSafe(String longUrl) {
         return CompletableFuture.supplyAsync(() -> {
+            if (longUrl.contains("force-circuit-open")) {
+                throw new RuntimeException("Simulated safety-check outage");
+            }
             boolean looksSuspicious = longUrl.contains("malware-test");
             return !looksSuspicious;
         });

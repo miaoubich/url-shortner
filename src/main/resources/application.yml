@@ -4,7 +4,11 @@ server:
 spring:
  application:
   name: url-shortner-app
-  
+ 
+ threads:
+  virtual:
+   enabled: true
+       
  datasource:
   url: jdbc:postgresql://localhost:5432/urlshortner
   username: ${SPRING_DATASOURCE_USERNAME:postgres}
@@ -67,5 +71,10 @@ management:
  endpoint:
   health:
    show-details: always 
+   
+logging:
+ level:
+  org.springframework.core.task: DEBUG
+
  
       

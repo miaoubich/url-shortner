@@ -22,10 +22,15 @@ public class ClickEventProducer {
 	@Async
 	public void publish(ClickEvent event) {
 		kafkaTemplate.send(KafkaTopicConfig.CLICK_EVENTS_TOPIC, event.shortCode(), event)
-			.whenComplete((result, ex) -> {
+			.whenComplete((result, ex) -> {// or (_, ex) to ignore the result
 				if(ex != null) {
 					log.warn("Failed to publish clickEvent for {}", event.shortCode(), ex);
-				}
+				}  else {
+			        log.info("Published clickEvent {} to partition {} offset {}",
+			                 event.shortCode(),
+			                 result.getRecordMetadata().partition(),
+			                 result.getRecordMetadata().offset());
+			    }
 			});
 	}
 }

@@ -9,35 +9,63 @@ import org.miaoubich.dto.UrlResponse;
 import org.miaoubich.entity.ShortUrl;
 import org.miaoubich.exception.UnsafeUrlException;
 import org.miaoubich.repository.ShortUrlRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class UrlService {
 
+	private final Logger log = LoggerFactory.getLogger(UrlService.class);
+	
     private final ShortUrlRepository shortUrlRepository;
     private final ShortCodeGenerator shortCodeGenerator;
     private final UrlSafetyCheckClient safetyCheckClient;
+    // To verify Spring did switch to Virtual threads 
+    private final ObjectProvider<TaskExecutor> executor;
     
     private final String LOCALHOST = "http://localhost:8080/";
 
     public UrlService(ShortUrlRepository shortUrlRepository, 
     		          ShortCodeGenerator shortCodeGenerator,
-    		          UrlSafetyCheckClient safetyCheckClient) {
+    		          UrlSafetyCheckClient safetyCheckClient,
+    		          ObjectProvider<TaskExecutor> executor) {
         this.shortUrlRepository = shortUrlRepository;
         this.shortCodeGenerator = shortCodeGenerator;
         this.safetyCheckClient = safetyCheckClient;
+        this.executor= executor;
     }
-
+    
+    @PostConstruct
+    public void checkExecutor() {
+    	/*
+    	 * it will print
+    	 * executor -> class org.springframework.core.task.SimpleAsyncTaskExecutor
+    	 * Not
+    	 * executor -> class org.springframework.core.task.VirtualThreadTaskExecutor
+		 *  
+		 * * Because Spring Boot 4.x does not use virtual threads yet
+		 * 
+		 * Must down-grade to Spring Boot 3.3.x
+    	 * */
+        log.info("executor -> {}", executor.getObject().getClass());
+    }
+    
     @Transactional
     public UrlResponse createShortUrl(CreateUrlRequest request) {
-    	// Fire the safety check; fails open per our design decision above.
-        // We don't block on the result here since isSafe() returns a
-        // CompletableFuture — see the note below about why.
+    	/* 
+    	 * Fire the safety check; fails open per our design decision above.
+         * We don't block on the result here since isSafe() returns a CompletableFuture
+         */
         boolean safe = safetyCheckClient.isSafe(request.longUrl()).join();
         
         if (!safe) {

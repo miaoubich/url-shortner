@@ -13,6 +13,15 @@ spring:
   url: jdbc:postgresql://localhost:5432/urlshortner
   username: ${SPRING_DATASOURCE_USERNAME:postgres}
   password:  ${SPRING_DATASOURCE_PASSWORD:password}
+  hikari:
+   maximum-pool-size: 20 #HikariCP will open at most 20 physical connections to PostgreSQL
+   minimum-idle: 5 #physical PostgreSQL connections Hikari keeps open even when nobody is using the database
+   #recycle connections periodically rather than holding them open forever, which helps catch/avoid subtly stale connections.
+   idle-timeout: 300000 #If a connection sits idle (unused) for 5 minutes, HikariCP is allowed to close it.
+   max-lifetime: 1800000 #A physical PostgreSQL connection will be closed and replaced every 30 minutes.
+   connection-timeout: 3000 #How long a thread (virtual or platform) will wait for a DB connection from the Hikari pool before failing with an exception.
+   pool-name: url-shortner-pool
+   driver-class-name: org.postgresql.Driver
  jpa:
   open-in-view: false
   hibernate:
@@ -23,12 +32,16 @@ spring:
   bootstrap-servers: localhost:9092
   producer:
    key-serializer: org.apache.kafka.common.serialization.StringSerializer
-   value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+   # For Spring boot 4.x, you can use the following serializer for JSON serialization
+   #value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+   value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
    acks: 1 #It ackowledge the producer that the leader broker wrotten the event
   consumer:
    group-id: analytics-service
    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-   value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+   # For Spring Boot 4.x, you can use the following deserializer for JSON deserialization
+   #value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+   value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
    properties:
     spring.json.trusted.packages: org.miaoubich.dto
     spring.json.value.default.type: org.miaoubich.dto.ClickEvent

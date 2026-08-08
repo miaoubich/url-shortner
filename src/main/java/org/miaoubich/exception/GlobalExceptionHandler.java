@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
 	
 	@ExceptionHandler(UnsafeUrlException.class)
 	public ResponseEntity<Map<String, Object>> handleUnsafeUrl(UnsafeUrlException ex) {
-	    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(body(ex.getMessage()));
+	    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(body(ex.getMessage()));
 	}
 	
 	private Map<String, Object> body(String message) {

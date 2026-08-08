@@ -22,6 +22,7 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
      * This stays O(page size) regardless of how deep you page, unlike OFFSET
      * which forces the DB to scan and discard every prior row.
      */
+	// curson is the last id from this batch, not a page number
 	@Query("select u from ShortUrl u where u.id < :cursor order by u.id desc")
 	List<ShortUrl> findPageByCursor(@Param("cursor") Long cursor, Limit limit);
 

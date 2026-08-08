@@ -1,9 +1,11 @@
 package org.miaoubich.service;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.miaoubich.config.CacheConfig;
 import org.miaoubich.dto.CreateUrlRequest;
+import org.miaoubich.dto.PagedResponse;
 import org.miaoubich.dto.RedirectTarget;
 import org.miaoubich.dto.UrlResponse;
 import org.miaoubich.entity.ShortUrl;
@@ -16,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,33 +34,30 @@ public class UrlService {
     private final ShortCodeGenerator shortCodeGenerator;
     private final UrlSafetyCheckClient safetyCheckClient;
     // To verify Spring did switch to Virtual threads 
-    private final ObjectProvider<TaskExecutor> executor;
+//    private final ObjectProvider<TaskExecutor> executor;
     
     private final String LOCALHOST = "http://localhost:8080/";
 
     public UrlService(ShortUrlRepository shortUrlRepository, 
     		          ShortCodeGenerator shortCodeGenerator,
-    		          UrlSafetyCheckClient safetyCheckClient,
-    		          ObjectProvider<TaskExecutor> executor) {
+    		          UrlSafetyCheckClient safetyCheckClient) {
         this.shortUrlRepository = shortUrlRepository;
         this.shortCodeGenerator = shortCodeGenerator;
         this.safetyCheckClient = safetyCheckClient;
-        this.executor= executor;
+//        this.executor= executor;
     }
     
-    @PostConstruct
+//    @PostConstruct
     public void checkExecutor() {
     	/*
-    	 * it will print
+    	 * Spring Boot 4.x does not use virtual threads yet, it will print 
     	 * executor -> class org.springframework.core.task.SimpleAsyncTaskExecutor
-    	 * Not
+    	 * 
+    	 * With Spring Boot 3.3.x+, it will print, stable virtual thread support. 
     	 * executor -> class org.springframework.core.task.VirtualThreadTaskExecutor
 		 *  
-		 * * Because Spring Boot 4.x does not use virtual threads yet
-		 * 
-		 * Must down-grade to Spring Boot 3.3.x
     	 * */
-        log.info("executor -> {}", executor.getObject().getClass());
+//        log.info("executor -> {}", executor.getObject().getClass());
     }
     
     @Transactional
@@ -113,6 +113,23 @@ public class UrlService {
         ShortUrl shortUrl = shortUrlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new EntityNotFoundException("Unknown short code: " + shortCode));
         shortUrl.setActive(active);
+    }
+    
+    @Transactional(readOnly = true)
+    public PagedResponse<UrlResponse> listUrls(Long cursor, int pageSize) {
+        long effectiveCursor = cursor != null ? cursor : Long.MAX_VALUE;
+
+        // Fetch one extra row beyond the page size — its presence tells us
+        //  whether there's a next page, without a separate COUNT query.
+        List<ShortUrl> rows = shortUrlRepository.findPageByCursor(effectiveCursor, Limit.of(pageSize + 1));
+
+        boolean hasMore = rows.size() > pageSize;
+        List<ShortUrl> page = hasMore ? rows.subList(0, pageSize) : rows;
+
+        Long nextCursor = hasMore ? page.get(page.size() - 1).getId() : null;
+        List<UrlResponse> items = page.stream().map(this::toResponse).toList();
+
+        return new PagedResponse<>(items, nextCursor, hasMore);
     }
 
     private String generateUniqueCode() {
